@@ -9,32 +9,97 @@ import {
 import { addNativeElement } from "@canva/design";
 import * as React from "react";
 import styles from "styles/components.css";
-import { getMonth } from './calendarUtils';
+
+enum Days {
+  SUN = "sun",
+  MON = "mon",
+}
 
 export interface CalendarConfig {
   includeDaysOfTheWeek: boolean;
   includeHeading: boolean;
-  startOfTheWeek: "sun" | "mon";
-};
+  startOfTheWeek: Days;
+}
 
-const listOfMonths = (() => {
-  // todo: I need to localise this
-  return [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-})();
+const doubleSpaceNumber = (dateString: string) =>
+  dateString.length == 1 ? " " + dateString : dateString;
 
+export function getMonth(
+  monthNumeric: number,
+  yearNumeric: number,
+  calendarConfig: CalendarConfig
+) {
+  const { includeDaysOfTheWeek, includeHeading, startOfTheWeek } =
+    calendarConfig;
+  const date = new Date();
+
+  date.setDate(1);
+  date.setFullYear(yearNumeric);
+  date.setMonth(monthNumeric);
+
+  const options = {
+    month: "long",
+    year: "numeric",
+  } as Intl.DateTimeFormatOptions;
+
+  let month: Array<string> = [];
+  if (includeHeading === true)
+    month.push(new Intl.DateTimeFormat("en-US", options).format(date));
+
+  if (includeDaysOfTheWeek === true) {
+    if (startOfTheWeek === Days.SUN) {
+      month.push("Su Mo Tu We Th Fr Sa");
+    } else {
+      month.push("Mo Tu We Th Fr Sa Su");
+    }
+  }
+
+  let weekOfDates: Array<string> = [];
+
+  if (startOfTheWeek === Days.SUN) {
+    for (let i = date.getDay(); i > 0; i--) {
+      weekOfDates.push("  ");
+    }
+  } else {
+    const count = date.getDay() === 0 ? 6 : date.getDay() - 1;
+    for (let i = 0; i < count; i++) {
+      weekOfDates.push("  ");
+    }
+  }
+
+  const startOfTheWeekDay = startOfTheWeek === Days.SUN ? 0 : 1;
+  const currentMonth = date.getMonth();
+
+  while (date.getMonth() === currentMonth) {
+    const numericalDate = date.getDate();
+    weekOfDates.push(doubleSpaceNumber(numericalDate.toString()));
+
+    date.setDate(date.getDate() + 1);
+    if (date.getDay() === startOfTheWeekDay) {
+      month.push(weekOfDates.join(" "));
+      weekOfDates = [];
+    }
+  }
+
+  month.push(weekOfDates.join(" "));
+
+  return month;
+}
+
+const listOfMonths = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const MonthSelect = ({
   initialValue,
@@ -43,11 +108,9 @@ const MonthSelect = ({
   initialValue: string;
   onChange: (value: string) => void;
 }) => {
-  const options: Array<{ value: string; label: string }> = [];
-  listOfMonths.forEach((month, index) => {
-    options.push({ value: "" + index, label: month });
-  });
-
+  const options: Array<{ value: string; label: string }> = listOfMonths.map(
+    (label, index) => ({ value: "" + index, label })
+  );
   return <Select value={initialValue} options={options} onChange={onChange} />;
 };
 
@@ -69,6 +132,17 @@ const YearSelect = ({
   return <Select value={initialValue} options={options} onChange={onChange} />;
 };
 
+const options = [
+  {
+    value: Days.SUN,
+    label: "Sunday",
+  },
+  {
+    value: Days.MON,
+    label: "Monday",
+  },
+];
+
 export const App = () => {
   const date = new Date();
   const [startMonth, setStartMonth] = React.useState<string>("0");
@@ -79,12 +153,12 @@ export const App = () => {
   const [calendarConfig, setCalendarConfig] = React.useState<CalendarConfig>({
     includeDaysOfTheWeek: true,
     includeHeading: true,
-    startOfTheWeek: "sun",
+    startOfTheWeek: Days.SUN,
   });
 
   const onStartMonthChange = (value: string) => setStartMonth(value);
   const onStartYearChange = (value: string) => setStartYear(value);
-  const onStartDayChange = (value: "sun" | "mon") =>
+  const onStartDayChange = (value: Days) =>
     setCalendarConfig((prevState) => ({
       ...prevState,
       startOfTheWeek: value,
@@ -116,17 +190,6 @@ export const App = () => {
       });
     }
   };
-
-  const options = [
-    {
-      value: "sun",
-      label: "Sunday",
-    },
-    {
-      value: "mon",
-      label: "Monday",
-    },
-  ];
 
   return (
     <div className={styles.scrollContainer}>
