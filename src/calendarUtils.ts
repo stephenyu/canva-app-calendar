@@ -12,9 +12,9 @@ export function getMonth(
     calendarConfig;
   const date = new Date();
 
-  date.setMonth(monthNumeric);
-  date.setFullYear(yearNumeric);
   date.setDate(1);
+  date.setFullYear(yearNumeric);
+  date.setMonth(monthNumeric);
 
   const options = {
     month: "long",
